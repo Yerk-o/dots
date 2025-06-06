@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI-Powered Cellular Dots Animation</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    /* AI Panel Styles */
+    .ai-panel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 350px;
+      background: rgba(40, 40, 40, 0.95);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: 1000;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+    }
+
+    .ai-panel.open {
+      transform: translateX(0);
+    }
+
+    .ai-toggle {
+      position: fixed;
+      top: 30px;
+      right: 30px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s ease;
+      z-index: 1001;
+    }
+
+    .ai-toggle:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .ai-panel h3 {
+      color: #f7f2e0;
+      margin: 0 0 15px 0;
+      font-size: 18px;
+      text-align: center;
+    }
+
+    .ai-input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      color: #f7f2e0;
+      font-size: 14px;
+      resize: vertical;
+      min-height: 80px;
+      box-sizing: border-box;
+    }
+
+    .ai-input::placeholder {
+      color: rgba(247, 242, 224, 0.6);
+    }
+
+    .ai-input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+    }
+
+    .ai-button {
+      width: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: all 0.3s ease;
+    }
+
+    .ai-button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .ai-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .ai-status {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .ai-status.loading {
+      background: rgba(255, 193, 7, 0.2);
+      color: #ffc107;
+      border: 1px solid rgba(255, 193, 7, 0.3);
+    }
+
+    .ai-status.success {
+      background: rgba(40, 167, 69, 0.2);
+      color: #28a745;
+      border: 1px solid rgba(40, 167, 69, 0.3);
+    }
+
+    .ai-status.error {
+      background: rgba(220, 53, 69, 0.2);
+      color: #dc3545;
+      border: 1px solid rgba(220, 53, 69, 0.3);
+    }
+
+    .ai-interpretation {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      font-size: 12px;
+      color: rgba(247, 242, 224, 0.8);
+      line-height: 1.4;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      background: none;
+      border: none;
+      color: #f7f2e0;
+      font-size: 20px;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity 0.3s ease;
+    }
+
+    .close-btn:hover {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <!-- AI Toggle Button -->
+  <button class="ai-toggle" onclick="toggleAIPanel()">
+    🤖 AI Pattern Generator
+  </button>
+
+  <!-- AI Panel -->
+  <div class="ai-panel" id="aiPanel">
+    <button class="close-btn" onclick="toggleAIPanel()">&times;</button>
+    <h3>🎨 Describe Your Vision</h3>
+    <textarea 
+      class="ai-input" 
+      id="aiInput" 
+      placeholder="Describe what you want to see... 
+
+Examples:
+• 'Gentle rain falling on a calm lake'
+• 'Energetic dance party with bright lights'
+• 'Floating through space among the stars'
+• 'Busy city street during rush hour'
+• 'Peaceful meditation in a forest'"></textarea>
+    <button class="ai-button" id="generateBtn" onclick="generatePattern()">
+      ✨ Generate Pattern
+    </button>
+    <div class="ai-status" id="aiStatus" style="display: none;"></div>
+    <div class="ai-interpretation" id="aiInterpretation" style="display: none;"></div>
+  </div>
+
+  <script>
+    // Cellular Dots Animation with AI Integration
+    let dots = [];
+    let whales = [];
+    let riverPath = [];
+    let controlHeight = 150;
+
+    // Parameters with default values
+    let params = {
+      speed: 0.5,
+      attraction: 0.08,
+      repulsion: 30,
+      wander: 2,
+      cluster: 0.2,
+      homeForce: 0.003
+    };
+
+    // AI Integration Variables
+    let isAIPanelOpen = false;
+    const API_BASE_URL = 'http://localhost:5000'; // Your Flask API URL
+
+    // Color theme
+    let isDarkMode = true;
+    let isColorfulMode = true;
+    
+    // Color schemes
+    let colorSchemes = {
+      dark: {
+        background: [40, 40, 40],
+        dots: [247, 242, 224],
+        panel: [60, 60, 60, 220],
+        text: [247, 242, 224]
+      },
+      light: {
+        background: [247, 242, 224],
+        dots: [10, 10, 10],
+        panel: [25, 80, 150, 220],
+        text: [255, 255, 255]
+      }
+    };
+
+    // Whimsical colors for magical effects
+    let whimsicalColors = [
+      [255, 105, 180], [138, 43, 226], [50, 205, 50], [255, 165, 0],
+      [0, 191, 255], [255, 20, 147], [127, 255, 212], [255, 215, 0],
+      [255, 99, 71], [147, 112, 219], [0, 255, 127], [255, 192, 203]
+    ];
+
+    // AI Panel Functions
+    function toggleAIPanel() {
+      isAIPanelOpen = !isAIPanelOpen;
+      const panel = document.getElementById('aiPanel');
+      const toggleBtn = document.querySelector('.ai-toggle');
+      
+      if (isAIPanelOpen) {
+        panel.classList.add('open');
+        toggleBtn.textContent = '← Close AI';
+      } else {
+        panel.classList.remove('open');
+        toggleBtn.textContent = '🤖 AI Pattern Generator';
+      }
+    }
+
+    function showStatus(message, type) {
+      const status = document.getElementById('aiStatus');
+      status.textContent = message;
+      status.className = `ai-status ${type}`;
+      status.style.display = 'block';
+    }
+
+    function showInterpretation(text) {
+      const interpretation = document.getElementById('aiInterpretation');
+      interpretation.textContent = text;
+      interpretation.style.display = 'block';
+    }
+
+    function hideInterpretation() {
+      document.getElementById('aiInterpretation').style.display = 'none';
+    }
+
+    async function generatePattern() {
+      const input = document.getElementById('aiInput').value.trim();
+      const button = document.getElementById('generateBtn');
+      
+      if (!input) {
+        showStatus('Please enter some text first!', 'error');
+        return;
+      }
+
+      // Show loading state
+      button.disabled = true;
+      button.textContent = '🔮 Generating...';
+      showStatus('Connecting to AI...', 'loading');
+      hideInterpretation();
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/generate-pattern`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text: input })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success && data.parameters) {
+          // Apply the AI-generated parameters
+          params.speed = data.parameters.speed;
+          params.attraction = data.parameters.attraction;
+          params.repulsion = data.parameters.repulsion;
+          params.wander = data.parameters.wander;
+          params.cluster = data.parameters.cluster;
+          params.homeForce = data.parameters.homeForce;
+
+          // Update sliders if they exist
+          updateSlidersFromParams();
+
+          // Show success message
+          showStatus('✨ Pattern generated successfully!', 'success');
+          
+          // Show interpretation if available
+          if (data.parameters.interpretation) {
+            showInterpretation(`AI Interpretation: ${data.parameters.interpretation}`);
+          }
+
+          console.log('Applied AI parameters:', data.parameters);
+        } else {
+          throw new Error('Invalid response from AI');
+        }
+
+      } catch (error) {
+        console.error('AI Generation Error:', error);
+        showStatus(`❌ Error: ${error.message}`, 'error');
+      } finally {
+        // Reset button
+        button.disabled = false;
+        button.textContent = '✨ Generate Pattern';
+      }
+    }
+
+    function updateSlidersFromParams() {
+      if (speedSlider) speedSlider.value(params.speed);
+      if (attractionSlider) attractionSlider.value(params.attraction);
+      if (repulsionSlider) repulsionSlider.value(params.repulsion);
+      if (wanderSlider) wanderSlider.value(params.wander);
+      if (clusterSlider) clusterSlider.value(params.cluster);
+      if (homeForceSlider) homeForceSlider.value(params.homeForce);
+    }
+
+    // Handle Enter key in textarea
+    document.addEventListener('DOMContentLoaded', function() {
+      const aiInput = document.getElementById('aiInput');
+      aiInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && e.ctrlKey) {
+          generatePattern();
+        }
+      });
+    });
+
+    // [Rest of your original cellular dots code continues here...]
+    // I'll include the essential parts and modify where needed
+
+    class MagicalWhale {
+      constructor() {
+        this.x = random(width * 0.2, width * 0.8);
+        this.y = random(height * 0.2, (height - controlHeight) * 0.8);
+        this.size = random(60, 100);
+        this.speed = random(0.5, 1.2);
+        this.direction = random(TWO_PI);
+        this.colorIndex = floor(random(whimsicalColors.length));
+        this.opacity = 0.8;
+        this.tailPhase = random(TWO_PI);
+        this.breathPhase = random(TWO_PI);
+        this.glowPhase = random(TWO_PI);
+        this.personality = random(['graceful', 'playful', 'dreamy']);
+        this.danceRadius = random(40, 80);
+        this.danceSpeed = random(0.02, 0.04);
+        this.isDancing = false;
+        this.timeSinceLastDance = 0;
+      }
+      
+      update() {
+        this.timeSinceLastDance++;
+        this.direction += sin(frameCount * 0.01) * 0.02;
+        this.speed = 0.8 + sin(frameCount * 0.008) * 0.3;
+        
+        this.x += cos(this.direction) * this.speed;
+        this.y += sin(this.direction) * this.speed;
+        
+        if (this.x < -this.size) this.x = width + this.size;
+        if (this.x > width + this.size) this.x = -this.size;
+        if (this.y < -this.size) this.y = height - controlHeight + this.size;
+        if (this.y > height - controlHeight + this.size) this.y = -this.size;
+        
+        this.tailPhase += 0.08;
+        this.breathPhase += 0.05;
+        this.glowPhase += 0.03;
+      }
+      
+      startDance() {
+        this.isDancing = true;
+        this.danceStartTime = frameCount;
+        this.danceAngle = 0;
+        this.timeSinceLastDance = 0;
+      }
+      
+      draw() {
+        push();
+        
+        let whaleColor = whimsicalColors[this.colorIndex];
+        let breathSize = 1 + sin(this.breathPhase) * 0.2;
+        let glowIntensity = (sin(this.glowPhase) + 1) * 0.5;
+        
+        if (isColorfulMode) {
+          for (let i = 4; i >= 1; i--) {
+            let glowAlpha = (150 * glowIntensity) / i;
+            fill(whaleColor[0], whaleColor[1], whaleColor[2], glowAlpha);
+            noStroke();
+            ellipse(this.x, this.y, (this.size + i * 15) * breathSize);
+          }
+          
+          fill(whaleColor[0], whaleColor[1], whaleColor[2], 200);
+          stroke(255, 255, 255, 100);
+          strokeWeight(2);
+        } else {
+          let currentScheme = isDarkMode ? colorSchemes.dark : colorSchemes.light;
+          
+          for (let i = 2; i >= 1; i--) {
+            let glowAlpha = (50 * glowIntensity) / i;
+            fill(currentScheme.dots[0], currentScheme.dots[1], currentScheme.dots[2], glowAlpha);
+            noStroke();
+            ellipse(this.x, this.y, (this.size + i * 8) * breathSize);
+          }
+          
+          fill(currentScheme.dots[0], currentScheme.dots[1], currentScheme.dots[2], 150);
+          stroke(currentScheme.dots[0], currentScheme.dots[1], currentScheme.dots[2], 50);
+          strokeWeight(1);
+        }
+        
+        ellipse(this.x, this.y, this.size * breathSize, this.size * 0.6 * breathSize);
+        
+        let tailX = this.x - cos(this.direction) * this.size * 0.4;
+        let tailY = this.y - sin(this.direction) * this.size * 0.4;
+        let tailSway = sin(this.tailPhase) * 10;
+        
+        ellipse(tailX, tailY + tailSway, this.size * 0.3, this.size * 0.2);
+        ellipse(tailX, tailY - tailSway, this.size * 0.3, this.size * 0.2);
+        
+        fill(255, 255, 255, 255);
+        noStroke();
+        let eyeX = this.x + cos(this.direction) * this.size * 0.2;
+        let eyeY = this.y + sin(this.direction) * this.size * 0.2;
+        ellipse(eyeX, eyeY, 8, 8);
+        
+        if (this.isDancing) {
+          for (let i = 0; i < 6; i++) {
+            let sparkleAngle = (frameCount * 0.1) + (i * TWO_PI / 6);
+            let sparkleX = this.x + cos(sparkleAngle) * this.size * 0.8;
+            let sparkleY = this.y + sin(sparkleAngle) * this.size * 0.6;
+            
+            if (isColorfulMode) {
+              fill(255, 255, 255, 200);
+            } else {
+              let currentScheme = isDarkMode ? colorSchemes.dark : colorSchemes.light;
+              fill(currentScheme.dots[0], currentScheme.dots[1], currentScheme.dots[2], 100);
+            }
+            noStroke();
+            star(sparkleX, sparkleY, 3, 6, 5);
+          }
+        }
+        
+        pop();
+      }
+    }
+    
+    function star(x, y, radius1, radius2, npoints) {
+      let angle = TWO_PI / npoints;
+      let halfAngle = angle / 2.0;
+      beginShape();
+      for (let a = 0; a < TWO_PI; a += angle) {
+        let sx = x + cos(a) * radius2;
+        let sy = y + sin(a) * radius2;
+        vertex(sx, sy);
+        sx = x + cos(a + halfAngle) * radius1;
+        sy = y + sin(a + halfAngle) * radius1;
+        vertex(sx, sy);
+      }
+      endShape(CLOSE);
+    }
+
+    let speedSlider, attractionSlider, repulsionSlider;
+    let wanderSlider, clusterSlider, homeForceSlider;
+    let resetButton, themeButton, colorfulButton;
+
+    class Dot {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.homeX = x;
+        this.homeY = y;
+        this.vx = 0;
+        this.vy = 0;
+        this.radius = random(0.8, 1.3);
+        this.neighborCount = 0;
+        this.magicalActivity = random(0, 1);
+        this.activityPhase = random(TWO_PI);
+        this.colorIndex = floor(random(whimsicalColors.length));
+        this.hasGlow = random() < 0.3;
+        this.glowIntensity = random(0.5, 1);
+        this.pulseSpeed = random(0.02, 0.05);
+      }
+      
+      update(dots) {
+        this.magicalActivity = (sin(frameCount * this.pulseSpeed + this.activityPhase) + 1) * 0.5;
+        
+        if (random() < 0.001) {
+          this.colorIndex = floor(random(whimsicalColors.length));
+        }
+        
+        this.vx += (this.homeX - this.x) * params.homeForce;
+        this.vy += (this.homeY - this.y) * params.homeForce;
+        
+        this.vx += (random(-1, 1) * params.wander) * params.speed;
+        this.vy += (random(-1, 1) * params.wander) * params.speed;
+        
+        this.neighborCount = 0;
+        
+        for (let other of dots) {
+          if (other !== this) {
+            const dx = this.x - other.x;
+            const dy = this.y - other.y;
+            const distSq = dx * dx + dy * dy;
+            const dist = sqrt(distSq);
+            
+            if (dist < params.repulsion * 1.5) {
+              this.neighborCount++;
+            }
+            
+            if (dist < params.repulsion && dist > 0) {
+              const force = (1 - dist / params.repulsion) * params.speed;
+              this.vx += (dx / dist) * force * 0.05;
+              this.vy += (dy / dist) * force * 0.05;
+            }
+            
+            if (dist < params.repulsion * 2 && dist > params.repulsion) {
+              const force = params.attraction * params.cluster * params.speed;
+              this.vx += (dx / dist) * -force;
+              this.vy += (dy / dist) * -force;
+            }
+          }
+        }
+        
+        this.vx *= 0.95;
+        this.vy *= 0.95;
+        
+        this.x += this.vx * params.speed;
+        this.y += this.vy * params.speed;
+        
+        const margin = 50;
+        if (this.x < margin) this.vx += 0.05;
+        if (this.x > width - margin) this.vx -= 0.05;
+        if (this.y < margin) this.vy += 0.05;
+        if (this.y > height - margin) this.vy -= 0.05;
+      }
+      
+      draw() {
+        let currentScheme = isDarkMode ? colorSchemes.dark : colorSchemes.light;
+        
+        if (this.hasGlow && this.magicalActivity > 0.4 && isColorfulMode) {
+          let glowColor = whimsicalColors[this.colorIndex];
+          let glowAlpha = map(this.magicalActivity, 0.4, 1, 0, 120) * this.glowIntensity;
+          
+          for (let i = 3; i >= 1; i--) {
+            let layerAlpha = glowAlpha / (i * 1.5);
+            fill(glowColor[0], glowColor[1], glowColor[2], layerAlpha);
+            noStroke();
+            circle(this.x, this.y, (this.radius * 2 + i * 8) * (1 + this.magicalActivity * 0.5));
+          }
+          
+          if (this.magicalActivity > 0.8) {
+            let sparkleAlpha = map(this.magicalActivity, 0.8, 1, 0, 200);
+            fill(255, 255, 255, sparkleAlpha);
+            circle(this.x, this.y, this.radius * 1.5);
+          }
+        }
+        
+        let alpha = map(this.neighborCount, 0, 20, 80, 160);
+        alpha = constrain(alpha, 80, 160);
+        
+        let speed = sqrt(this.vx * this.vx + this.vy * this.vy);
+        let sizeVar = map(speed, 0, 0.5, 0, 0.3);
+        
+        if (this.hasGlow && this.magicalActivity > 0.6 && isColorfulMode) {
+          let magicalColor = whimsicalColors[this.colorIndex];
+          let blendFactor = map(this.magicalActivity, 0.6, 1, 0, 0.3);
+          
+          let r = lerp(currentScheme.dots[0], magicalColor[0], blendFactor);
+          let g = lerp(currentScheme.dots[1], magicalColor[1], blendFactor);
+          let b = lerp(currentScheme.dots[2], magicalColor[2], blendFactor);
+          
+          fill(r, g, b, alpha);
+        } else {
+          fill(currentScheme.dots[0], currentScheme.dots[1], currentScheme.dots[2], alpha);
+        }
+        
+        noStroke();
+        circle(this.x, this.y, this.radius * 2 + sizeVar);
+      }
+    }
+
+    function setup() {
+      createCanvas(windowWidth, windowHeight);
+      createControlPanel();
+      createRiverPath();
+      createDotsAlongRiver();
+      
+      let currentScheme = isDarkMode ? colorSchemes.dark : colorSchemes.light;
+      background(currentScheme.background[0], currentScheme.background[1], currentScheme.background[2]);
+    }
+
+    function createControlPanel() {
+      const sliderWidth = 150;
+      const margin = 20;
+      let xPos = margin;
+      
+      speedSlider = createSlider(0.1, 2.0, params.speed, 0.1);
+      speedSlider.position(xPos, height - controlHeight + 45);
+      speedSlider.style('width', sliderWidth + 'px');
+      xPos += sliderWidth + margin;
+      
+      attractionSlider = createSlider(0, 0.2, params.attraction, 0.01);
+      attractionSlider.position(xPos, height - controlHeight + 45);
+      attractionSlider.style('width', sliderWidth + 'px');
+      xPos += sliderWidth + margin;
+      
+      repulsionSlider = createSlider(10, 60, params.repulsion, 1);
+      repulsionSlider.position(xPos, height - controlHeight + 45);
+      repulsionSlider.style('width', sliderWidth + 'px');
+      xPos += sliderWidth + margin;
+      
+      wanderSlider = createSlider(0, 0.5, params.wander, 0.01);
+      wanderSlider.position(xPos, height - controlHeight + 45);
+      wanderSlider.style('width', sliderWidth + 'px');
+      xPos += sliderWidth + margin;
+      
+      clusterSlider = createSlider(0, 0.5, params.cluster, 0.01);
+      clusterSlider.position(xPos, height - controlHeight + 45);
+      clusterSlider.style('width', sliderWidth + 'px');
+      xPos += sliderWidth + margin;
+      
+      homeForceSlider = createSlider(0, 0.01, params.homeForce, 0.001);
+      homeForceSlider.position(xPos, height - controlHeight + 45);
+      homeForceSlider.style('width', sliderWidth + 'px');
+      
+      resetButton = createButton('Reset Dots');
+      resetButton.position(width - 400 - margin, height - controlHeight + margin + 20);
+      resetButton.style('padding', '8px 16px');
+      resetButton.style('background-color', '#2c3e50');
+      resetButton.style('color', 'white');
+      resetButton.style('border', 'none');
+      resetButton.style('border-radius', '4px');
+      resetButton.style('cursor', 'pointer');
+      resetButton.mousePressed(resetDots);
+      
+      themeButton = createButton(isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode');
+      themeButton.position(width - 280 - margin, height - controlHeight + margin + 20);
+      themeButton.style('padding', '8px 16px');
+      themeButton.style('background-color', '#2c3e50');
+      themeButton.style('color', 'white');
+      themeButton.style('border', 'none');
+      themeButton.style('border-radius', '4px');
+      themeButton.style('cursor', 'pointer');
+      themeButton.mousePressed(toggleTheme);
+      
+      colorfulButton = createButton(isColorfulMode ? '🎨 Classic Mode' : '🌈 Colorful Mode');
+      colorfulButton.position(width - 160 - margin, height - controlHeight + margin + 20);
+      colorfulButton.style('padding', '8px 16px');
+      colorfulButton.style('background-color', '#2c3e50');
+      colorfulButton.style('color', 'white');
+      colorfulButton.style('border', 'none');
+      colorfulButton.style('border-radius', '4px');
+      colorfulButton.style('cursor', 'pointer');
+      colorfulButton.mousePressed(toggleColorful);
+    }
+
+    function resetDots() {
+      createRiverPath();
+      createDotsAlongRiver();
+    }
+
+    function toggleTheme() {
+      isDarkMode = !isDarkMode;
+      themeButton.html(isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode');
+    }
+
+    function toggleColorful() {
+      isColorfulMode = !isColorfulMode;
+      colorfulButton.html(isColorfulMode ? '🎨 Classic Mode' : '🌈 Colorful Mode');
+    }
+
+    function addMagicalParticle() {
+      let x = random(width);
+      let y = random(height - controlHeight);
+      let magicalDot = new Dot(x, y);
+      magicalDot.hasGlow = true;
+      magicalDot.glowIntensity = 2;
+      magicalDot.pulseSpeed = 0.1;
+      magicalDot.magicalActivity = 1;
+      dots.push(magicalDot);
+      
+      setTimeout(() => {
+        let index = dots.indexOf(magicalDot);
+        if (index > -1) {
+          dots.splice(index, 1);
+        }
+      }, 3000);
+    }
+
+    function createRiverPath() {
+      riverPath = [];
+      const segments = 14;
+      const amplitude = (height - controlHeight) * 0.22;
+      
+      for (let i = 0; i <= segments; i++) {
+        let y = ((height - controlHeight) / segments) * i;
+        let x = width / 2 + sin(i * 0.5) * amplitude + cos(i * 0.3) * (amplitude * 0.4);
+        riverPath.push({x, y});
+      }
+    }
+
+    function createDotsAlongRiver() {
+      dots = [];
+      
+      for (let i = 0; i < riverPath.length - 1; i++) {
+        const start = riverPath[i];
+        const end = riverPath[i+1];
+        const length = dist(start.x, start.y, end.x, end.y);
+        const numDots = length * 0.6;
+        
+        for (let j = 0; j < numDots; j++) {
+          const ratio = j / numDots;
+          const x = lerp(start.x, end.x, ratio);
+          const y = lerp(start.y, end.y, ratio);
+          
+          const riverWidth = 150;
+          const noiseX = (random() - 0.5) * riverWidth;
+          const density = random();
+          
+          if (density > abs(noiseX) / riverWidth * 2) {
+            dots.push(new Dot(x + noiseX, y + random(-10, 10)));
+          }
+        }
+        
+        if (random() > 0.3) {
+          const clusterX = lerp(start.x, end.x, random()) + (random() - 0.5) * 200;
+          const clusterY = lerp(start.y, end.y, random()) + (random() - 0.5) * 60;
+          const clusterSize = random(8, 30);
+          
+          for (let k = 0; k < clusterSize; k++) {
+            const dotX = clusterX + randomGaussian(0, 20);
+            const dotY = clusterY + randomGaussian(0, 20);
+            dots.push(new Dot(dotX, dotY));
+          }
+        }
+      }
+      
+      for (let i = 0; i < 80; i++) {
+        const x = random(width);
+        const y = random(height - controlHeight);
+        dots.push(new Dot(x, y));
+      }
+    }
+
+    function draw() {
+      updateParamsFromSliders();
+      
+      let currentScheme = isDarkMode ? colorSchemes.dark : colorSchemes.light;
+      background(currentScheme.background[0], currentScheme.background[1], currentScheme.background[2]);
+      
+      for (let dot of dots) {
+        dot.update(dots);
+      }
+      
+      for (let dot of dots) {
+        dot.draw();
+      }
+      
+      if (frameCount % 30 === 0 && random() < 0.1 && isColorfulMode) {
+        addMagicalParticle();
+      }
+      
+      drawControlPanel();
+    }
+
+    function updateParamsFromSliders() {
+      if (speedSlider) params.speed = speedSlider.value();
+      if (attractionSlider) params.attraction = attractionSlider.value();
+      if (repulsionSlider) params.repulsion = repulsionSlider.value();
+      if (wanderSlider) params.wander = wanderSlider.value();
+      if (clusterSlider) params.cluster = clusterSlider.value();
+      if (homeForceSlider) params.homeForce = homeForceSlider.value();
+    }
+
+    function drawControlPanel() {
+      let currentScheme = isDarkMode ? colorSchemes.dark : colorSchemes.light;
+      fill(currentScheme.panel[0], currentScheme.panel[1], currentScheme.panel[2], currentScheme.panel[3]);
+      noStroke();
+      rect(0, height - controlHeight, width, controlHeight);
+      
+      textSize(12);
+      fill(currentScheme.text[0], currentScheme.text[1], currentScheme.text[2]);
+      textAlign(CENTER);
+      
+      const sliderWidth = 150;
+      const margin = 20;
+      let xPos = margin;
+      
+      text("Speed", xPos + sliderWidth/2, height - controlHeight + 30);
+      text(params.speed.toFixed(1), xPos + sliderWidth/2, height - controlHeight + 75);
+      xPos += sliderWidth + margin;
+      
+      text("Attraction", xPos + sliderWidth/2, height - controlHeight + 30);
+      text(params.attraction.toFixed(2), xPos + sliderWidth/2, height - controlHeight + 75);
+      xPos += sliderWidth + margin;
+      
+      text("Repulsion", xPos + sliderWidth/2, height - controlHeight + 30);
+      text(params.repulsion.toFixed(0), xPos + sliderWidth/2, height - controlHeight + 75);
+      xPos += sliderWidth + margin;
+      
+      text("Wander", xPos + sliderWidth/2, height - controlHeight + 30);
+      text(params.wander.toFixed(2), xPos + sliderWidth/2, height - controlHeight + 75);
+      xPos += sliderWidth + margin;
+      
+      text("Cluster", xPos + sliderWidth/2, height - controlHeight + 30);
+      text(params.cluster.toFixed(2), xPos + sliderWidth/2, height - controlHeight + 75);
+      xPos += sliderWidth + margin;
+      
+      text("HomeForce", xPos + sliderWidth/2, height - controlHeight + 30);
+      text(params.homeForce.toFixed(3), xPos + sliderWidth/2, height - controlHeight + 75);
+    }
+
+    function mousePressed() {
+      if (mouseY < height - controlHeight) {
+        for (let i = 0; i < 15; i++) {
+          const newX = mouseX + randomGaussian(0, 20);
+          const newY = mouseY + randomGaussian(0, 20);
+          dots.push(new Dot(newX, newY));
+        }
+      }
+      return true;
+    }
+
+    function keyPressed() {
+      if (key === 'y' || key === 'Y') {
+        captureHighResScreenshot();
+      }
+      
+      if (key === 'a' || key === 'A') {
+        toggleAIPanel();
+      }
+    }
+
+    // NEW: Shape formation functions
+    function generateShape() {
+      const text = document.getElementById('aiText').value.trim();
+      if (!text) {
+        document.getElementById('aiStatus').textContent = '❌ Please enter some text first!';
+        document.getElementById('aiStatus').className = 'ai-status error';
+        return;
+      }
+
+      document.getElementById('aiStatus').textContent = '🎨 Creating visual concept...';
+      document.getElementById('aiStatus').className = 'ai-status info';
+
+      const requestData = {
+        text: text,
+        centerX: width / 2,
+        centerY: (height - controlHeight) / 2,
+        scale: Math.min(width, height - controlHeight) / 800
+      };
+
+      fetch(API_BASE_URL + '/generate-shape', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          applyShapeToDotsSystem(data);
+          document.getElementById('aiStatus').textContent = '✨ Visual concept created!';
+          document.getElementById('aiStatus').className = 'ai-status success';
+          document.getElementById('aiInterpretation').textContent = data.interpretation;
+        } else {
+          throw new Error(data.error || 'Unknown error');
+        }
+      })
+      .catch(error => {
+        console.error('Shape generation error:', error);
+        document.getElementById('aiStatus').textContent = '❌ Error: ' + error.message;
+        document.getElementById('aiStatus').className = 'ai-status error';
+      });
+    }
+
+    function applyShapeToDotsSystem(shapeData) {
+      const targetPositions = shapeData.points;
+      
+      // Ensure we have enough dots
+      while (dots.length < targetPositions.length) {
+        dots.push(new Dot(random(width), random(height - controlHeight)));
+      }
+      
+      // Assign target positions to dots
+      for (let i = 0; i < Math.min(dots.length, targetPositions.length); i++) {
+        dots[i].targetX = targetPositions[i].x;
+        dots[i].targetY = targetPositions[i].y;
+        dots[i].hasTarget = true;
+        dots[i].isForming = true;
+        dots[i].hasGlow = true;
+        dots[i].glowIntensity = 2;
+        dots[i].magicalActivity = 1;
+      }
+      
+      // Reset dots that don't have targets
+      for (let i = targetPositions.length; i < dots.length; i++) {
+        dots[i].hasTarget = false;
+        dots[i].isForming = false;
+      }
+    }
+
+    function captureHighResScreenshot() {
+      const targetWidth = 3000;
+      const aspectRatio = (height - controlHeight) / width;
+      const targetHeight = Math.floor(targetWidth * aspectRatio);
+      
+      let pg = createGraphics(targetWidth, targetHeight);
+      
+      const scaleX = targetWidth / width;
+      const scaleY = targetHeight / (height - controlHeight);
+      
+      let currentScheme = isDarkMode ? colorSchemes.dark : colorSchemes.light;
+      pg.background(currentScheme.background[0], currentScheme.background[1], currentScheme.background[2]);
+      
+      pg.noStroke();
+      for (let dot of dots) {
+        if (dot.y >= height - controlHeight) continue;
+        
+        let highResX = dot.x * scaleX;
+        let highResY = dot.y * scaleY;
+        
+        if (dot.hasGlow && dot.magicalActivity > 0.4) {
+          let glowColor = whimsicalColors[dot.colorIndex];
+          let glowAlpha = map(dot.magicalActivity, 0.4, 1, 0, 120) * dot.glowIntensity;
+          
+          for (let i = 3; i >= 1; i--) {
+            let layerAlpha = glowAlpha / (i * 1.5);
+            pg.fill(glowColor[0], glowColor[1], glowColor[2], layerAlpha);
+            pg.circle(highResX, highResY, (dot.radius * 2 + i * 8) * (1 + dot.magicalActivity * 0.5) * scaleX);
+          }
+          
+          if (dot.magicalActivity > 0.8) {
+            let sparkleAlpha = map(dot.magicalActivity, 0.8, 1, 0, 200);
+            pg.fill(255, 255, 255, sparkleAlpha);
+            pg.circle(highResX, highResY, dot.radius * 1.5 * scaleX);
+          }
+        }
+        
+        let alpha = map(dot.neighborCount, 0, 20, 80, 160);
+        alpha = constrain(alpha, 80, 160);
+        
+        let speed = sqrt(dot.vx * dot.vx + dot.vy * dot.vy);
+        let sizeVar = map(speed, 0, 0.5, 0, 0.3);
+        let highResSize = (dot.radius * 2 + sizeVar) * scaleX;
+        
+        if (dot.hasGlow && dot.magicalActivity > 0.6) {
+          let magicalColor = whimsicalColors[dot.colorIndex];
+          let blendFactor = map(dot.magicalActivity, 0.6, 1, 0, 0.3);
+          
+          let r = lerp(currentScheme.dots[0], magicalColor[0], blendFactor);
+          let g = lerp(currentScheme.dots[1], magicalColor[1], blendFactor);
+          let b = lerp(currentScheme.dots[2], magicalColor[2], blendFactor);
+          
+          pg.fill(r, g, b, alpha);
+        } else {
+          pg.fill(currentScheme.dots[0], currentScheme.dots[1], currentScheme.dots[2], alpha);
+        }
+        
+        pg.circle(highResX, highResY, highResSize);
+      }
+      
+      let timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      let filename = `ai-cellular-dots-${isDarkMode ? 'dark' : 'light'}-${timestamp}.png`;
+      
+      pg.save(filename);
+      showScreenshotConfirmation();
+    }
+
+    function showScreenshotConfirmation() {
+      let confirmationDiv = document.createElement('div');
+      confirmationDiv.style.position = 'fixed';
+      confirmationDiv.style.top = '20px';
+      confirmationDiv.style.left = '20px';
+      confirmationDiv.style.background = isDarkMode ? 'rgba(247, 242, 224, 0.9)' : 'rgba(40, 40, 40, 0.9)';
+      confirmationDiv.style.color = isDarkMode ? 'rgb(40, 40, 40)' : 'rgb(247, 242, 224)';
+      confirmationDiv.style.padding = '15px 20px';
+      confirmationDiv.style.borderRadius = '8px';
+      confirmationDiv.style.fontSize = '14px';
+      confirmationDiv.style.fontFamily = 'Arial, sans-serif';
+      confirmationDiv.style.zIndex = '999';
+      confirmationDiv.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+      confirmationDiv.innerHTML = '📸 Screenshot saved!<br><small>3000px width, downloaded to your Downloads folder</small>';
+      
+      document.body.appendChild(confirmationDiv);
+      
+      setTimeout(() => {
+        if (confirmationDiv.parentNode) {
+          confirmationDiv.parentNode.removeChild(confirmationDiv);
+        }
+      }, 3000);
+    }
+
+    function windowResized() {
+      resizeCanvas(windowWidth, windowHeight);
+      
+      const sliderWidth = 150;
+      const margin = 20;
+      let xPos = margin;
+      
+      if (speedSlider) {
+        speedSlider.position(xPos, height - controlHeight + 45);
+        xPos += sliderWidth + margin;
+      }
+      
+      if (attractionSlider) {
+        attractionSlider.position(xPos, height - controlHeight + 45);
+        xPos += sliderWidth + margin;
+      }
+      
+      if (repulsionSlider) {
+        repulsionSlider.position(xPos, height - controlHeight + 45);
+        xPos += sliderWidth + margin;
+      }
+      
+      if (wanderSlider) {
+        wanderSlider.position(xPos, height - controlHeight + 45);
+        xPos += sliderWidth + margin;
+      }
+      
+      if (clusterSlider) {
+        clusterSlider.position(xPos, height - controlHeight + 45);
+        xPos += sliderWidth + margin;
+      }
+      
+      if (homeForceSlider) {
+        homeForceSlider.position(xPos, height - controlHeight + 45);
+      }
+      
+      if (resetButton) {
+        resetButton.position(width - 300 - margin, height - controlHeight + margin + 20);
+      }
+      
+      if (themeButton) {
+        themeButton.position(width - 200 - margin, height - controlHeight + margin + 20);
+      }
+      
+      if (colorfulButton) {
+        colorfulButton.position(width - 100 - margin, height - controlHeight + margin + 20);
+      }
+      
+      createRiverPath();
+      createDotsAlongRiver();
+    }
+  </script>
+</body>
+</html>
