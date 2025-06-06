@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI-Powered Cellular Dots Animation</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    /* Demo Mode Banner */
+    .demo-banner {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: #ff6b6b;
+      color: white;
+      padding: 10px;
+      text-align: center;
+      z-index: 2000;
+      font-size: 14px;
+    }
+
+    .demo-banner a {
+      color: #fff;
+      text-decoration: underline;
+    }
+
+    /* AI Panel Styles */
+    .ai-panel {
+      position: fixed;
+      top: 60px;
+      right: 20px;
+      width: 350px;
+      background: rgba(40, 40, 40, 0.95);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: 1000;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+    }
+
+    .ai-panel.open {
+      transform: translateX(0);
+    }
+
+    .ai-toggle {
+      position: fixed;
+      top: 70px;
+      right: 30px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s ease;
+      z-index: 1001;
+    }
+
+    .ai-toggle:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .ai-panel h3 {
+      color: #f7f2e0;
+      margin: 0 0 15px 0;
+      font-size: 18px;
+      text-align: center;
+    }
+
+    .ai-input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      color: #f7f2e0;
+      font-size: 14px;
+      resize: vertical;
+      min-height: 80px;
+      box-sizing: border-box;
+    }
+
+    .ai-input::placeholder {
+      color: rgba(247, 242, 224, 0.6);
+    }
+
+    .ai-input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+    }
+
+    .ai-button {
+      width: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: all 0.3s ease;
+    }
+
+    .ai-button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .ai-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .ai-status {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .ai-status.loading {
+      background: rgba(255, 193, 7, 0.2);
+      color: #ffc107;
+      border: 1px solid rgba(255, 193, 7, 0.3);
+    }
+
+    .ai-status.success {
+      background: rgba(40, 167, 69, 0.2);
+      color: #28a745;
+      border: 1px solid rgba(40, 167, 69, 0.3);
+    }
+
+    .ai-status.error {
+      background: rgba(220, 53, 69, 0.2);
+      color: #dc3545;
+      border: 1px solid rgba(220, 53, 69, 0.3);
+    }
+
+    .ai-status.info {
+      background: rgba(23, 162, 184, 0.2);
+      color: #17a2b8;
+      border: 1px solid rgba(23, 162, 184, 0.3);
+    }
+
+    .ai-interpretation {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      font-size: 12px;
+      color: rgba(247, 242, 224, 0.8);
+      line-height: 1.4;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      background: none;
+      border: none;
+      color: #f7f2e0;
+      font-size: 20px;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity 0.3s ease;
+    }
+
+    .close-btn:hover {
+      opacity: 1;
+    }
+
+    .preset-buttons {
+      margin-top: 15px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .preset-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #f7f2e0;
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .preset-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+  </style>
+</head>
+<body>
+  <!-- Demo Mode Banner -->
+  <div class="demo-banner">
+    🎓 Demo Mode - AI features using local simulation. For full version, see <a href="https://github.com/yourusername/ai-cellular-dots" target="_blank">setup instructions</a>
+  </div>
+
+  <!-- AI Toggle Button -->
+  <button class="ai-toggle" onclick="toggleAIPanel()">
+    🤖 AI Pattern Generator
+  </button>
+
+  <!-- AI Panel -->
+  <div class="ai-panel" id="aiPanel">
+    <button class="close-btn" onclick="toggleAIPanel()">&times;</button>
+    <h3>🎨 Describe Your Vision</h3>
+    <textarea 
+      class="ai-input" 
+      id="aiInput" 
+      placeholder="Describe what you want to see... 
+
+Examples:
+• 'Gentle rain falling on a calm lake'
+• 'Energetic dance party with bright lights'
+• 'Floating through space among the stars'
+• 'Busy city street during rush hour'
+• 'Peaceful meditation in a forest'"></textarea>
+    <button class="ai-button" id="generateBtn" onclick="generatePattern()">
+      ✨ Generate Pattern
+    </button>
+    
+    <!-- Preset Examples -->
+    <div class="preset-buttons">
+      <button class="preset-btn" onclick="applyPreset('calm')">🌊 Calm Ocean</button>
+      <button class="preset-btn" onclick="applyPreset('storm')">⛈️ Storm</button>
+      <button class="preset-btn" onclick="applyPreset('love')">💕 Love</button>
+      <button class="preset-btn" onclick="applyPreset('space')">🌌 Space</button>
+    </div>
+    
+    <div class="ai-status" id="aiStatus" style="display: none;"></div>
+    <div class="ai-interpretation" id="aiInterpretation" style="display: none;"></div>
+  </div>
+
+  <script>
+    // Demo mode flag
+    const DEMO_MODE = true;
+    
+    // Cellular Dots Animation with AI Integration
+    let dots = [];
+    let whales = [];
+    let riverPath = [];
+    let controlHeight = 150;
+
+    // Parameters with default values
+    let params = {
+      speed: 0.5,
+      attraction: 0.08,
+      repulsion: 30,
+      wander: 2,
+      cluster: 0.2,
+      homeForce: 0.003
+    };
+
+    // AI Integration Variables
+    let isAIPanelOpen = false;
+
+    // Color theme
+    let isDarkMode = true;
+    let isColorfulMode = true;
+    
+    // Color schemes
+    let colorSchemes = {
+      dark: {
+        background: [40, 40, 40],
+        dots: [247, 242, 224],
+        panel: [60, 60, 60, 220],
+        text: [247, 242, 224]
+      },
+      light: {
+        background: [247, 242, 224],
+        dots: [10, 10, 10],
+        panel: [25, 80, 150, 220],
+        text: [255, 255, 255]
+      }
+    };
+
+    // Whimsical colors for magical effects
+    let whimsicalColors = [
+      [255, 105, 180], [138, 43, 226], [50, 205, 50], [255, 165, 0],
+      [0, 191, 255], [255, 20, 147], [127, 255, 212], [255, 215, 0],
+      [255, 99, 71], [147, 112, 219], [0, 255, 127], [255, 192, 203]
+    ];
+
+    // Preset patterns for demo mode
+    const presets = {
+      calm: {
+        params: {
+          speed: 0.3,
+          attraction: 0.04,
+          repulsion: 25,
+          wander: 0.05,
+          cluster: 0.15,
+          homeForce: 0.006
+        },
+        interpretation: "Gentle, flowing movement like calm ocean waves"
+      },
+      storm: {
+        params: {
+          speed: 1.8,
+          attraction: 0.02,
+          repulsion: 45,
+          wander: 0.4,
+          cluster: 0.08,
+          homeForce: 0.002
+        },
+        interpretation: "Chaotic, energetic movement with high turbulence"
+      },
+      love: {
+        params: {
+          speed: 0.6,
+          attraction: 0.15,
+          repulsion: 20,
+          wander: 0.08,
+          cluster: 0.35,
+          homeForce: 0.004
+        },
+        interpretation: "Particles drawn together in harmonious clusters"
+      },
+      space: {
+        params: {
+          speed: 0.4,
+          attraction: 0.06,
+          repulsion: 35,
+          wander: 0.12,
+          cluster: 0.1,
+          homeForce: 0.001
+        },
+        interpretation: "Floating particles with gentle drift, like stars in space"
+      }
+    };
+
+    // AI Panel Functions
+    function toggleAIPanel() {
+      isAIPanelOpen = !isAIPanelOpen;
+      const panel = document.getElementById('aiPanel');
+      const toggleBtn = document.querySelector('.ai-toggle');
+      
+      if (isAIPanelOpen) {
+        panel.classList.add('open');
+        toggleBtn.textContent = '← Close AI';
+      } else {
+        panel.classList.remove('open');
+        toggleBtn.textContent = '🤖 AI Pattern Generator';
+      }
+    }
+
+    function showStatus(message, type) {
+      const status = document.getElementById('aiStatus');
+      status.textContent = message;
+      status.className = `ai-status ${type}`;
+      status.style.display = 'block';
+    }
+
+    function showInterpretation(text) {
+      const interpretation = document.getElementById('aiInterpretation');
+      interpretation.textContent = text;
+      interpretation.style.display = 'block';
+    }
+
+    function hideInterpretation() {
+      document.getElementById('aiInterpretation').style.display = 'none';
+    }
+
+    // Apply preset pattern
+    function applyPreset(presetName) {
+      const preset = presets[presetName];
+      if (preset) {
+        // Apply parameters
+        Object.assign(params, preset.params);
+        updateSlidersFromParams();
+        
+        // Show status
+        showStatus(`✨ Applied ${presetName} preset!`, 'success');
+        showInterpretation(`Pattern: ${preset.interpretation}`);
+      }
+    }
+
+    // Simulate AI pattern generation for demo mode
+    function simulateAIGeneration(text) {
+      const textLower = text.toLowerCase();
+      
+      // Default values
+      let newParams = {
+        speed: 1.0,
+        attraction: 0.08,
+        repulsion: 30,
+        wander: 0.1,
+        cluster: 0.2,
+        homeForce: 0.003,
+        interpretation: "Pattern generated based on keyword analysis"
+      };
+      
+      // Match keywords to patterns
+      if (textLower.includes('calm') || textLower.includes('peaceful') || textLower.includes('gentle')) {
+        Object.assign(newParams, presets.calm.params);
+        newParams.interpretation = "Detected calm/peaceful mood - creating gentle, flowing patterns";
+      } else if (textLower.includes('storm') || textLower.includes('chaos') || textLower.includes('wild')) {
+        Object.assign(newParams, presets.storm.params);
+        newParams.interpretation = "Detected energetic/chaotic mood - creating turbulent patterns";
+      } else if (textLower.includes('love') || textLower.includes('together') || textLower.includes('family')) {
+        Object.assign(newParams, presets.love.params);
+        newParams.interpretation = "Detected social/love theme - creating clustering patterns";
+      } else if (textLower.includes('space') || textLower.includes('stars') || textLower.includes('float')) {
+        Object.assign(newParams, presets.space.params);
+        newParams.interpretation = "Detected space/floating theme - creating drifting patterns";
+      } else if (textLower.includes('water') || textLower.includes('ocean') || textLower.includes('wave')) {
+        newParams = {
+          speed: 0.8,
+          attraction: 0.09,
+          repulsion: 28,
+          wander: 0.11,
+          cluster: 0.22,
+          homeForce: 0.004,
+          interpretation: "Detected water/fluid theme - creating flowing wave patterns"
+        };
+      } else if (textLower.includes('dance') || textLower.includes('party') || textLower.includes('energy')) {
+        newParams = {
+          speed: 1.4,
+          attraction: 0.12,
+          repulsion: 22,
+          wander: 0.25,
+          cluster: 0.3,
+          homeForce: 0.002,
+          interpretation: "Detected dance/party theme - creating rhythmic, energetic patterns"
+        };
+      }
+      
+      return newParams;
+    }
+
+    async function generatePattern() {
+      const input = document.getElementById('aiInput').value.trim();
+      const button = document.getElementById('generateBtn');
+      
+      if (!input) {
+        showStatus('Please enter some text first!', 'error');
+        return;
+      }
+
+      // Show loading state
+      button.disabled = true;
+      button.textContent = '🔮 Generating...';
+      showStatus('Analyzing your text...', 'loading');
+      hideInterpretation();
+
+      // Simulate AI processing delay
+      setTimeout(() => {
+        if (DEMO_MODE) {
+          // Use local simulation
+          const generatedParams = simulateAIGeneration(input);
+          
+          // Apply the parameters
+          Object.assign(params, generatedParams);
+          updateSlidersFromParams();
+          
+          // Show success
+          showStatus('✨ Pattern generated successfully!', 'success');
+          showInterpretation(`AI Interpretation: ${generatedParams.interpretation}`);
+        }
+        
+        // Reset button
+        button.disabled = false;
+        button.textContent = '✨ Generate Pattern';
+      }, 1500); // Simulate processing time
+    }
+
+    function updateSlidersFromParams() {
+      if (speedSlider) speedSlider.value(params.speed);
+      if (attractionSlider) attractionSlider.value(params.attraction);
+      if (repulsionSlider) repulsionSlider.value(params.repulsion);
+      if (wanderSlider) wanderSlider.value(params.wander);
+      if (clusterSlider) clusterSlider.value(params.cluster);
+      if (homeForceSlider) homeForceSlider.value(params.homeForce);
+    }
+
+    // Handle Enter key in textarea
+    document.addEventListener('DOMContentLoaded', function() {
+      const aiInput = document.getElementById('aiInput');
+      aiInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && e.ctrlKey) {
+          generatePattern();
+        }
+      });
+    });
+
+    // Dot class
+    class Dot {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.homeX = x;
+        this.homeY = y;
+        this.vx = 0;
+        this.vy = 0;
+        this.radius = random(0.8, 1.3);
+        this.neighborCount = 0;
+        this.magicalActivity = random(0, 1);
+        this.activityPhase = random(TWO_PI);
+        this.colorIndex = floor(random(whimsicalColors.length));
+        this.hasGlow = random() < 0.3;
+        this.glowIntensity = random(0.5, 1);
+        this.pulseSpeed = random(0.02, 0.05);
+      }
+      
+      update(dots) {
+        this.magicalActivity = (sin(frameCount * this.pulseSpeed + this.activityPhase) + 1) * 0.5;
+        
+        if (random() < 0.001) {
+          this.colorIndex = floor(random(whimsicalColors.length));
+        }
+        
+        this.vx += (this.homeX - this.x) * params.homeForce;
+        this.vy += (this.homeY - this.y) * params.homeForce;
+        
+        this.vx += (random(-1, 1) * params.wander) * params.speed;
+        this.vy += (random(-1, 1) * params.wander) * params.speed;
+        
+        this.neighborCount = 0;
+        
+        for (let other of dots) {
+          if (other !== this) {
+            const dx = this.x - other.x;
+            const dy = this.y - other.y;
+            const distSq = dx * dx + dy * dy;
+            const dist = sqrt(distSq);
+            
+            if (dist < params.repulsion * 1.5) {
+              this.neighborCount++;
+            }
+            
+            if (dist < params.repulsion && dist > 0) {
+              const force = (1 - dist / params.repulsion) * params.speed;
+              this.vx += (dx / dist) * force * 0.05;
+              this.vy += (dy / dist) * force * 0.05;
+            }
+            
+            if (dist < params.repulsion * 2 && dist > params.repulsion) {
+              const force = params.attraction * params.cluster * params.speed;
+              this.vx += (dx / dist) * -force;
+              this.vy += (dy / dist) * -force;
+            }
+          }
+        }
+        
+        this.vx *= 0.95;
+        this.vy *= 0.95;
+        
+        this.x += this.vx * params.speed;
+        this.y += this.vy * params.speed;
+        
+        const margin = 50;
+        if (this.x < margin) this.vx += 0.05;
+        if (this.x > width - margin) this.vx -= 0.05;
+        if (this.y < margin) this.vy += 0.05;
+        if (this.y > height - margin) this.vy -= 0.05;
+      }
+      
+      draw() {
+        let currentScheme = isDarkMode ? colorSchemes.dark : colorSchemes.light;
+        
+        if (this.hasGlow && this.magicalActivity > 0.4 && isColorfulMode) {
+          let glowColor = whimsicalColors[this.colorIndex];
+          let glowAlpha = map(this.magicalActivity, 0.4, 1, 0, 120) * this.glowIntensity;
+          
+          for (let i = 3; i >= 1; i--) {
+            let layerAlpha = glowAlpha / (i * 1.5);
+            fill(glowColor[0], glowColor[1], glowColor[2], layerAlpha);
+            noStroke();
+            circle(this.x, this.y, (this.radius * 2 + i * 8) * (1 + this.magicalActivity * 0.5));
+          }
+          
+          if (this.magicalActivity > 0.8) {
+            let sparkleAlpha = map(this.magicalActivity, 0.8, 1, 0, 200);
+            fill(255, 255, 255, sparkleAlpha);
+            circle(this.x, this.y, this.radius * 1.5);
+          }
+        }
+        
+        let alpha = map(this.neighborCount, 0, 20, 80, 160);
+        alpha = constrain(alpha, 80, 160);
+        
+        let speed = sqrt(this.vx * this.vx + this.vy * this.vy);
+        let sizeVar = map(speed, 0, 0.5, 0, 0.3);
+        
+        if (this.hasGlow && this.magicalActivity > 0.6 && isColorfulMode) {
+          let magicalColor = whimsicalColors[this.colorIndex];
+          let blendFactor = map(this.magicalActivity, 0.6, 1, 0, 0.3);
+          
+          let r = lerp(currentScheme.dots[0], magicalColor[0], blendFactor);
+          let g = lerp(currentScheme.dots[1], magicalColor[1], blendFactor);
+          let b = lerp(currentScheme.dots[2], magicalColor[2], blendFactor);
+          
+          fill(r, g, b, alpha);
+        } else {
+          fill(currentScheme.dots[0], currentScheme.dots[1], currentScheme.dots[2], alpha);
+        }
+        
+        noStroke();
+        circle(this.x, this.y, this.radius * 2 + sizeVar);
+      }
+    }
+
+    // P5.js functions
+    let speedSlider, attractionSlider, repulsionSlider;
+    let wanderSlider, clusterSlider, homeForceSlider;
+    let resetButton, themeButton, colorfulButton;
+
+    function setup() {
+      createCanvas(windowWidth, windowHeight);
+      createControlPanel();
+      createRiverPath();
+      createDotsAlongRiver();
+      
+      let currentScheme = isDarkMode ? colorSchemes.dark : colorSchemes.light;
+      background(currentScheme.background[0], currentScheme.background[1], currentScheme.background[2]);
+    }
+
+    function createControlPanel() {
+      const sliderWidth = 150;
+      const margin = 20;
+      let xPos = margin;
+      
+      speedSlider = createSlider(0.1, 2.0, params.speed, 0.1);
+      speedSlider.position(xPos, height - controlHeight + 45);
+      speedSlider.style('width', sliderWidth + 'px');
+      xPos += sliderWidth + margin;
+      
+      attractionSlider = createSlider(0, 0.2, params.attraction, 0.01);
+      attractionSlider.position(xPos, height - controlHeight + 45);
+      attractionSlider.style('width', sliderWidth + 'px');
+      xPos += sliderWidth + margin;
+      
+      repulsionSlider = createSlider(10, 60, params.repulsion, 1);
+      repulsionSlider.position(xPos, height - controlHeight + 45);
+      repulsionSlider.style('width', sliderWidth + 'px');
+      xPos += sliderWidth + margin;
+      
+      wanderSlider = createSlider(0, 0.5, params.wander, 0.01);
+      wanderSlider.position(xPos, height - controlHeight + 45);
+      wanderSlider.style('width', sliderWidth + 'px');
+      xPos += sliderWidth + margin;
+      
+      clusterSlider = createSlider(0, 0.5, params.cluster, 0.01);
+      clusterSlider.position(xPos, height - controlHeight + 45);
+      clusterSlider.style('width', sliderWidth + 'px');
+      xPos += sliderWidth + margin;
+      
+      homeForceSlider = createSlider(0, 0.01, params.homeForce, 0.001);
+      homeForceSlider.position(xPos, height - controlHeight + 45);
+      homeForceSlider.style('width', sliderWidth + 'px');
+      
+      resetButton = createButton('Reset Dots');
+      resetButton.position(width - 400 - margin, height - controlHeight + margin + 20);
+      resetButton.style('padding', '8px 16px');
+      resetButton.style('background-color', '#2c3e50');
+      resetButton.style('color', 'white');
+      resetButton.style('border', 'none');
+      resetButton.style('border-radius', '4px');
+      resetButton.style('cursor', 'pointer');
+      resetButton.mousePressed(resetDots);
+      
+      themeButton = createButton(isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode');
+      themeButton.position(width - 280 - margin, height - controlHeight + margin + 20);
+      themeButton.style('padding', '8px 16px');
+      themeButton.style('background-color', '#2c3e50');
+      themeButton.style('color', 'white');
+      themeButton.style('border', 'none');
+      themeButton.style('border-radius', '4px');
+      themeButton.style('cursor', 'pointer');
+      themeButton.mousePressed(toggleTheme);
+      
+      colorfulButton = createButton(isColorfulMode ? '🎨 Classic Mode' : '🌈 Colorful Mode');
+      colorfulButton.position(width - 160 - margin, height - controlHeight + margin + 20);
+      colorfulButton.style('padding', '8px 16px');
+      colorfulButton.style('background-color', '#2c3e50');
+      colorfulButton.style('color', 'white');
+      colorfulButton.style('border', 'none');
+      colorfulButton.style('border-radius', '4px');
+      colorfulButton.style('cursor', 'pointer');
+      colorfulButton.mousePressed(toggleColorful);
+    }
+
+    function resetDots() {
+      createRiverPath();
+      createDotsAlongRiver();
+    }
+
+    function toggleTheme() {
+      isDarkMode = !isDarkMode;
+      themeButton.html(isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode');
+    }
+
+    function toggleColorful() {
+      isColorfulMode = !isColorfulMode;
+      colorfulButton.html(isColorfulMode ? '🎨 Classic Mode' : '🌈 Colorful Mode');
+    }
+
+    function addMagicalParticle() {
+      let x = random(width);
+      let y = random(height - controlHeight);
+      let magicalDot = new Dot(x, y);
+      magicalDot.hasGlow = true;
+      magicalDot.glowIntensity = 2;
+      magicalDot.pulseSpeed = 0.1;
+      magicalDot.magicalActivity = 1;
+      dots.push(magicalDot);
+      
+      setTimeout(() => {
+        let index = dots.indexOf(magicalDot);
+        if (index > -1) {
+          dots.splice(index, 1);
+        }
+      }, 3000);
+    }
+
+    function createRiverPath() {
+      riverPath = [];
+      const segments = 14;
+      const amplitude = (height - controlHeight) * 0.22;
+      
+      for (let i = 0; i <= segments; i++) {
+        let y = ((height - controlHeight) / segments) * i;
+        let x = width / 2 + sin(i * 0.5) * amplitude + cos(i * 0.3) * (amplitude * 0.4);
+        riverPath.push({x, y});
+      }
+    }
+
+    function createDotsAlongRiver() {
+      dots = [];
+      
+      for (let i = 0; i < riverPath.length - 1; i++) {
+        const start = riverPath[i];
+        const end = riverPath[i+1];
+        const length = dist(start.x, start.y, end.x, end.y);
+        const numDots = length * 0.6;
+        
+        for (let j = 0; j < numDots; j++) {
+          const ratio = j / numDots;
+          const x = lerp(start.x, end.x, ratio);
+          const y = lerp(start.y, end.y, ratio);
+          
+          const riverWidth = 150;
+          const noiseX = (random() - 0.5) * riverWidth;
+          const density = random();
+          
+          if (density > abs(noiseX) / riverWidth * 2) {
+            dots.push(new Dot(x + noiseX, y + random(-10, 10)));
+          }
+        }
+        
+        if (random() > 0.3) {
+          const clusterX = lerp(start.x, end.x, random()) + (random() - 0.5) * 200;
+          const clusterY = lerp(start.y, end.y, random()) + (random() - 0.5) * 60;
+          const clusterSize = random(8, 30);
+          
+          for (let k = 0; k < clusterSize; k++) {
+            const dotX = clusterX + randomGaussian(0, 20);
+            const dotY = clusterY + randomGaussian(0, 20);
+            dots.push(new Dot(dotX, dotY));
+          }
+        }
+      }
+      
+      for (let i = 0; i < 80; i++) {
+        const x = random(width);
+        const y = random(height - controlHeight);
+        dots.push(new Dot(x, y));
+      }
+    }
+
+    function draw() {
+      updateParamsFromSliders();
+      
+      let currentScheme = isDarkMode ? colorSchemes.dark : colorSchemes.light;
+      background(currentScheme.background[0], currentScheme.background[1], currentScheme.background[2]);
+      
+      for (let dot of dots) {
+        dot.update(dots);
+      }
+      
+      for (let dot of dots) {
+        dot.draw();
+      }
+      
+      if (frameCount % 30 === 0 && random() < 0.1 && isColorfulMode) {
+        addMagicalParticle();
+      }
+      
+      drawControlPanel();
+    }
+
+    function updateParamsFromSliders() {
+      if (speedSlider) params.speed = speedSlider.value();
+      if (attractionSlider) params.attraction = attractionSlider.value();
+      if (repulsionSlider) params.repulsion = repulsionSlider.value();
+      if (wanderSlider) params.wander = wanderSlider.value();
+      if (clusterSlider) params.cluster = clusterSlider.value();
+      if (homeForceSlider) params.homeForce = homeForceSlider.value();
+    }
+
+    function drawControlPanel() {
+      let currentScheme = isDarkMode ? colorSchemes.dark : colorSchemes.light;
+      fill(currentScheme.panel[0], currentScheme.panel[1], currentScheme.panel[2], currentScheme.panel[3]);
+      noStroke();
+      rect(0, height - controlHeight, width, controlHeight);
+      
+      textSize(12);
+      fill(currentScheme.text[0], currentScheme.text[1], currentScheme.text[2]);
+      textAlign(CENTER);
+      
+      const sliderWidth = 150;
+      const margin = 20;
+      let xPos = margin;
+      
+      text("Speed", xPos + sliderWidth/2, height - controlHeight + 30);
+      text(params.speed.toFixed(1), xPos + sliderWidth/2, height - controlHeight + 75);
+      xPos += sliderWidth + margin;
+      
+      text("Attraction", xPos + sliderWidth/2, height - controlHeight + 30);
+      text(params.attraction.toFixed(2), xPos + sliderWidth/2, height - controlHeight + 75);
+      xPos += sliderWidth + margin;
+      
+      text("Repulsion", xPos + sliderWidth/2, height - controlHeight + 30);
+      text(params.repulsion.toFixed(0), xPos + sliderWidth/2, height - controlHeight + 75);
+      xPos += sliderWidth + margin;
+      
+      text("Wander", xPos + sliderWidth/2, height - controlHeight + 30);
+      text(params.wander.toFixed(2), xPos + sliderWidth/2, height - controlHeight + 75);
+      xPos += sliderWidth + margin;
+      
+      text("Cluster", xPos + sliderWidth/2, height - controlHeight + 30);
+      text(params.cluster.toFixed(2), xPos + sliderWidth/2, height - controlHeight + 75);
+      xPos += sliderWidth + margin;
+      
+      text("HomeForce", xPos + sliderWidth/2, height - controlHeight + 30);
+      text(params.homeForce.toFixed(3), xPos + sliderWidth/2, height - controlHeight + 75);
+    }
+
+    function mousePressed() {
+      if (mouseY < height - controlHeight) {
+        for (let i = 0; i < 15; i++) {
+          const newX = mouseX + randomGaussian(0, 20);
+          const newY = mouseY + randomGaussian(0, 20);
+          dots.push(new Dot(newX, newY));
+        }
+      }
+      return true;
+    }
+
+    function keyPressed() {
+      if (key === 'y' || key === 'Y') {
+        captureHighResScreenshot();
+      }
+      
+      if (key === 'a' || key === 'A') {
+        toggleAIPanel();
+      }
+    }
+
+    function captureHighResScreenshot() {
+      const targetWidth = 3000;
+      const aspectRatio = (height - controlHeight) / width;
+      const targetHeight = Math.floor(targetWidth * aspectRatio);
+      
+      let pg = createGraphics(targetWidth, targetHeight);
+      
+      const scaleX = targetWidth / width;
+      const scaleY = targetHeight / (height - controlHeight);
+      
+      let currentScheme = isDarkMode ? colorSchemes.dark : colorSchemes.light;
+      pg.background(currentScheme.background[0], currentScheme.background[1], currentScheme.background[2]);
+      
+      pg.noStroke();
+      for (let dot of dots) {
+        if (dot.y >= height - controlHeight) continue;
+        
+        let highResX = dot.x * scaleX;
+        let highResY = dot.y * scaleY;
+        
+        if (dot.hasGlow && dot.magicalActivity > 0.4) {
+          let glowColor = whimsicalColors[dot.colorIndex];
+          let glowAlpha = map(dot.magicalActivity, 0.4, 1, 0, 120) * dot.glowIntensity;
+          
+          for (let i = 3; i >= 1; i--) {
+            let layerAlpha = glowAlpha / (i * 1.5);
+            pg.fill(glowColor[0], glowColor[1], glowColor[2], layerAlpha);
+            pg.circle(highResX, highResY, (dot.radius * 2 + i * 8) * (1 + dot.magicalActivity * 0.5) * scaleX);
+          }
+          
+          if (dot.magicalActivity > 0.8) {
+            let sparkleAlpha = map(dot.magicalActivity, 0.8, 1, 0, 200);
+            pg.fill(255, 255, 255, sparkleAlpha);
+            pg.circle(highResX, highResY, dot.radius * 1.5 * scaleX);
+          }
+        }
+        
+        let alpha = map(dot.neighborCount, 0, 20, 80, 160);
+        alpha = constrain(alpha, 80, 160);
+        
+        let speed = sqrt(dot.vx * dot.vx + dot.vy * dot.vy);
+        let sizeVar = map(speed, 0, 0.5, 0, 0.3);
+        let highResSize = (dot.radius * 2 + sizeVar) * scaleX;
+        
+        if (dot.hasGlow && dot.magicalActivity > 0.6) {
+          let magicalColor = whimsicalColors[dot.colorIndex];
+          let blendFactor = map(dot.magicalActivity, 0.6, 1, 0, 0.3);
+          
+          let r = lerp(currentScheme.dots[0], magicalColor[0], blendFactor);
+          let g = lerp(currentScheme.dots[1], magicalColor[1], blendFactor);
+          let b = lerp(currentScheme.dots[2], magicalColor[2], blendFactor);
+          
+          pg.fill(r, g, b, alpha);
+        } else {
+          pg.fill(currentScheme.dots[0], currentScheme.dots[1], currentScheme.dots[2], alpha);
+        }
+        
+        pg.circle(highResX, highResY, highResSize);
+      }
+      
+      let timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      let filename = `ai-cellular-dots-${isDarkMode ? 'dark' : 'light'}-${timestamp}.png`;
+      
+      pg.save(filename);
+      showScreenshotConfirmation();
+    }
+
+    function showScreenshotConfirmation() {
+      let confirmationDiv = document.createElement('div');
+      confirmationDiv.style.position = 'fixed';
+      confirmationDiv.style.top = '60px';
+      confirmationDiv.style.left = '20px';
+      confirmationDiv.style.background = isDarkMode ? 'rgba(247, 242, 224, 0.9)' : 'rgba(40, 40, 40, 0.9)';
+      confirmationDiv.style.color = isDarkMode ? 'rgb(40, 40, 40)' : 'rgb(247, 242, 224)';
+      confirmationDiv.style.padding = '15px 20px';
+      confirmationDiv.style.borderRadius = '8px';
+      confirmationDiv.style.fontSize = '14px';
+      confirmationDiv.style.fontFamily = 'Arial, sans-serif';
+      confirmationDiv.style.zIndex = '999';
+      confirmationDiv.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+      confirmationDiv.innerHTML = '📸 Screenshot saved!<br><small>3000px width, downloaded to your Downloads folder</small>';
+      
+      document.body.appendChild(confirmationDiv);
+      
+      setTimeout(() => {
+        if (confirmationDiv.parentNode) {
+          confirmationDiv.parentNode.removeChild(confirmationDiv);
+        }
+      }, 3000);
+    }
+
+    function windowResized() {
+      resizeCanvas(windowWidth, windowHeight);
+      
+      const sliderWidth = 150;
+      const margin = 20;
+      let xPos = margin;
+      
+      if (speedSlider) {
+        speedSlider.position(xPos, height - controlHeight + 45);
+        xPos += sliderWidth + margin;
+      }
+      
+      if (attractionSlider) {
+        attractionSlider.position(xPos, height - controlHeight + 45);
+        xPos += sliderWidth + margin;
+      }
+      
+      if (repulsionSlider) {
+        repulsionSlider.position(xPos, height - controlHeight + 45);
+        xPos += sliderWidth + margin;
+      }
+      
+      if (wanderSlider) {
+        wanderSlider.position(xPos, height - controlHeight + 45);
+        xPos += sliderWidth + margin;
+      }
+      
+      if (clusterSlider) {
+        clusterSlider.position(xPos, height - controlHeight + 45);
+        xPos += sliderWidth + margin;
+      }
+      
+      if (homeForceSlider) {
+        homeForceSlider.position(xPos, height - controlHeight + 45);
+      }
+      
+      if (resetButton) {
+        resetButton.position(width - 400 - margin, height - controlHeight + margin + 20);
+      }
+      
+      if (themeButton) {
+        resetButton.position(width - 300 - margin, height - controlHeight + margin + 20);
+        themeButton.position(width - 200 - margin, height - controlHeight + margin + 20);
+      }
+      
+      if (colorfulButton) {
+        colorfulButton.position(width - 100 - margin, height - controlHeight + margin + 20);
+      }
+      
+      createRiverPath();
+      createDotsAlongRiver();
+    }
+  </script>
+</body>
+</html>
